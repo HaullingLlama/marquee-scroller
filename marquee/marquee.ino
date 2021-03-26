@@ -132,6 +132,9 @@ static const char CHANGE_FORM1[] PROGMEM = "<form class='w3-container' action='/
 static const char CHANGE_FORM2[] PROGMEM = "<p><input name='isPM' class='w3-check w3-margin-top' type='checkbox' %IS_PM_CHECKED%> Show PM indicator (only 12h format)</p>"
                       "<p><input name='flashseconds' class='w3-check w3-margin-top' type='checkbox' %FLASHSECONDS%> Flash : in the time</p>"
                       "<p><label>Marquee Message (up to 60 chars)</label><input class='w3-input w3-border w3-margin-bottom' type='text' name='marqueeMsg' value='%MSG%' maxlength='60'></p>"
+                      "<hr><p><input name='showcountdown' class='w3-check w3-margin-top' type='checkbox' %SHOWCOUNTDOWN%> Show countdown to date</p>"
+                      "<p><label>Days Until Message (up to 60 chars)</label><input class='w3-input w3-border w3-margin-bottom' type='text' name='daysUntilMsg' value='%DUMSG%' maxlength='60'></p>"
+                      "<p><label>Special Date</label><input class='w3-input w3-border w3-margin-bottom' type='date' name='targetDateVal' value='%SDDATE%' maxlength='60'></p><hr>"
                       "<p><label>Start Time </label><input name='startTime' type='time' value='%STARTTIME%'></p>"
                       "<p><label>End Time </label><input name='endTime' type='time' value='%ENDTIME%'></p>"
                       "<p>Display Brightness <input class='w3-border w3-margin-bottom' name='ledintensity' type='number' min='0' max='15' value='%INTENSITYOPTIONS%'></p>"
@@ -388,6 +391,9 @@ void loop() {
         msg += TimeDB.getDayName() + ", ";
         msg += TimeDB.getMonthName() + " " + day() + "  ";
       }
+      if (showCountDown) {
+        msg += TimeDB.getDateDiff(targetDateValue) + " days until " + daysUntilMessage + "  ";
+      }
       if (SHOW_CITY) {
         msg += weatherClient.getCity(0) + "  ";
       }
@@ -412,7 +418,7 @@ void loop() {
         msg += "Pressure:" + weatherClient.getPressure(0) + getPressureSymbol() + "  ";
       }
      
-      msg += marqueeMessage + " ";
+      msg += marqueeMessage + "  ";
       
       if (NEWS_ENABLED) {
         msg += "  " + NEWS_SOURCE + ": " + newsClient.getTitle(newsIndex) + "  ";
@@ -588,6 +594,9 @@ void handleLocations() {
   SHOW_HIGHLOW = server.hasArg("showhighlow");
   IS_METRIC = server.hasArg("metric");
   marqueeMessage = decodeHtmlString(server.arg("marqueeMsg"));
+  showCountDown = server.hasArg("showcountdown");
+  daysUntilMessage = decodeHtmlString(server.arg("daysUntilMsg"));
+  targetDateValue = decodeHtmlString(server.arg("targetDateVal"));
   timeDisplayTurnsOn = decodeHtmlString(server.arg("startTime"));
   timeDisplayTurnsOff = decodeHtmlString(server.arg("endTime"));
   displayIntensity = server.arg("ledintensity").toInt();
@@ -885,6 +894,13 @@ void handleConfigure() {
   }
   form.replace("%FLASHSECONDS%", isFlashSecondsChecked);
   form.replace("%MSG%", marqueeMessage);
+  String isShowCountDownChecked = "";
+  if (showCountDown) {
+    isShowCountDownChecked = "checked='checked'";
+  }
+  form.replace("%SHOWCOUNTDOWN%", isShowCountDownChecked);
+  form.replace("%DUMSG%", daysUntilMessage);
+  form.replace("%SDDATE%", targetDateValue);
   form.replace("%STARTTIME%", timeDisplayTurnsOn);
   form.replace("%ENDTIME%", timeDisplayTurnsOff);
   form.replace("%INTENSITYOPTIONS%", String(displayIntensity));
@@ -1096,6 +1112,12 @@ void displayWeatherData() {
 
   String time = TimeDB.getDayName() + ", " + TimeDB.getMonthName() + " " + day() + ", " + hourFormat12() + ":" + TimeDB.zeroPad(minute()) + " " + TimeDB.getAmPm();
 
+  if(showCountDown) {
+    html = "<div class='w3-cell-row'>" + TimeDB.getDateDiff(targetDateValue) + " days until " + daysUntilMessage + "</div><hr>";
+    server.sendContent(String(html)); // spit out what we got
+    html = ""; // fresh start
+  }
+
   Serial.println(weatherClient.getCity(0));
   Serial.println(weatherClient.getCondition(0));
   Serial.println(weatherClient.getDescription(0));
@@ -1131,7 +1153,6 @@ void displayWeatherData() {
 
   server.sendContent(String(html)); // spit out what we got
   html = ""; // fresh start
-
 
   if (OCTOPRINT_ENABLED) {
     html = "<div class='w3-cell-row'>OctoPrint Status: ";
@@ -1338,6 +1359,8 @@ String writeCityIds() {
     f.println("APIKEY=" + APIKEY);
     f.println("CityID=" + String(CityIDs[0]));
     f.println("marqueeMessage=" + marqueeMessage);
+    f.println("daysUntilMessage=" + daysUntilMessage);
+    f.println("targetDateValue=" + targetDateValue);
     f.println("newsSource=" + NEWS_SOURCE);
     f.println("timeDisplayTurnsOn=" + timeDisplayTurnsOn);
     f.println("timeDisplayTurnsOff=" + timeDisplayTurnsOff);
@@ -1346,6 +1369,7 @@ String writeCityIds() {
     f.println("isNews=" + String(NEWS_ENABLED));
     f.println("newsApiKey=" + NEWS_API_KEY);
     f.println("isFlash=" + String(flashOnSeconds));
+    f.println("isCountDown=" + String(showCountDown));
     f.println("is24hour=" + String(IS_24HOUR));
     f.println("isPM=" + String(IS_PM));
     f.println("wideclockformat=" + Wide_Clock_Style);
@@ -1413,7 +1437,7 @@ void readCityIds() {
     if (line.indexOf("isNews=") >= 0) {
       NEWS_ENABLED = line.substring(line.lastIndexOf("isNews=") + 7).toInt();
       Serial.println("NEWS_ENABLED=" + String(NEWS_ENABLED));
-    }
+    } 
     if (line.indexOf("newsApiKey=") >= 0) {
       NEWS_API_KEY = line.substring(line.lastIndexOf("newsApiKey=") + 11);
       NEWS_API_KEY.trim();
@@ -1422,6 +1446,10 @@ void readCityIds() {
     if (line.indexOf("isFlash=") >= 0) {
       flashOnSeconds = line.substring(line.lastIndexOf("isFlash=") + 8).toInt();
       Serial.println("flashOnSeconds=" + String(flashOnSeconds));
+    }
+    if (line.indexOf("isCountDown=") >= 0) {
+      showCountDown = line.substring(line.lastIndexOf("isCountDown=") + 12).toInt();
+      Serial.println("showCountDown=" + String(showCountDown));
     }
     if (line.indexOf("is24hour=") >= 0) {
       IS_24HOUR = line.substring(line.lastIndexOf("is24hour=") + 9).toInt();
@@ -1456,6 +1484,16 @@ void readCityIds() {
       marqueeMessage = line.substring(line.lastIndexOf("marqueeMessage=") + 15);
       marqueeMessage.trim();
       Serial.println("marqueeMessage=" + marqueeMessage);
+    }
+    if (line.indexOf("daysUntilMessage=") >= 0) {
+      daysUntilMessage = line.substring(line.lastIndexOf("daysUntilMessage=") + 17);
+      daysUntilMessage.trim();
+      Serial.println("daysUntilMessage=" + daysUntilMessage);
+    }
+    if (line.indexOf("targetDateValue=") >= 0) {
+      targetDateValue = line.substring(line.lastIndexOf("targetDateValue=") + 16);
+      targetDateValue.trim();
+      Serial.println("targetDateValue=" + targetDateValue);
     }
     if (line.indexOf("timeDisplayTurnsOn=") >= 0) {
       timeDisplayTurnsOn = line.substring(line.lastIndexOf("timeDisplayTurnsOn=") + 19);

@@ -62,6 +62,9 @@ String APIKEY = ""; // Your API Key from http://openweathermap.org/
 // Default City Location (use http://openweathermap.org/find to find city ID)
 int CityIDs[] = { 5304391 }; //Only USE ONE for weather marquee
 String marqueeMessage = "";
+boolean showCountDown = false;
+String daysUntilMessage = "";
+String targetDateValue = "";
 boolean IS_METRIC = false; // false = Imperial and true = Metric
 boolean IS_24HOUR = false; // 23:00 millitary 24 hour clock
 boolean IS_PM = true; // Show PM indicator on Clock when in AM/PM mode

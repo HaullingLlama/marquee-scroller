@@ -179,3 +179,23 @@ String TimeDB::zeroPad(int number) {
   }
 }
 
+String TimeDB::getDateDiff(String date) {
+  tmElements_t T1;
+  tmElements_t T2;
+
+  int dateYear = date.substring(0, 4).toInt();
+  uint8_t dateMonth = atoi(date.substring(5, 7).c_str());
+  uint8_t dateDay = atoi(date.substring(8).c_str());
+  
+  T1.Hour = 0;
+  T1.Minute = 0;
+  T1.Second = 0;
+  T1.Day = dateDay;
+  T1.Month = dateMonth;
+  T1.Year = dateYear - 1970; // because Year is offset from 1970
+  time_t T1sec = makeTime( T1 );
+
+  time_t T2sec = now();
+  int32_t diff = T1sec - T2sec;
+  return String(diff / 86400);
+}

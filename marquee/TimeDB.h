@@ -36,6 +36,7 @@ class TimeDB
     String getMonthName();
     String getAmPm();
     String zeroPad(int number);
+    String getDateDiff(String date);
 
   private:
     const char* servername = "api.timezonedb.com";  // remote server we will connect to
