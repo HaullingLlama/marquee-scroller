@@ -72,6 +72,7 @@ public:
   String getProgressPrintTimeLeft();
   String getState();
   boolean isPrinting();
+  boolean needsAttention();
   boolean isOperational();
   String getError();
 };

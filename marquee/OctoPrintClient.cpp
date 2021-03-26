@@ -205,6 +205,14 @@ boolean OctoPrintClient::isPrinting() {
   return printing;
 }
 
+boolean OctoPrintClient::needsAttention() {
+  boolean needsAttention = false;
+  if (printerData.state == "Pausing" || printerData.state == "Paused" || printerData.state == "Error") {
+    needsAttention = true;
+  }
+  return needsAttention;
+}
+
 boolean OctoPrintClient::isOperational() {
   boolean operational = false;
   if (printerData.state == "Operational") {

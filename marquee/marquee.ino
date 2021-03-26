@@ -1663,6 +1663,14 @@ void centerPrint(String msg) {
   centerPrint(msg, false);
 }
 
+int printingIndicator(boolean isRefresh) {
+  int rtnValue = (printerClient.getProgressCompletion().toFloat() / float(100)) * (matrix.width() - 1);
+  if (isRefresh == true && (flashOnSeconds && (second() % 2) == 0)) {
+    rtnValue = 0;
+  }
+  return rtnValue;
+}
+
 void centerPrint(String msg, boolean extraStuff) {
   int x = (matrix.width() - (msg.length() * width)) / 2;
 
@@ -1672,9 +1680,17 @@ void centerPrint(String msg, boolean extraStuff) {
       matrix.drawPixel(matrix.width() - 1, 6, HIGH);
     }
 
-    if (OCTOPRINT_ENABLED && OCTOPRINT_PROGRESS && printerClient.isPrinting()) {
-      int numberOfLightPixels = (printerClient.getProgressCompletion().toFloat() / float(100)) * (matrix.width() - 1);
-      matrix.drawFastHLine(0, 7, numberOfLightPixels, HIGH);
+    if (OCTOPRINT_ENABLED && OCTOPRINT_PROGRESS) {
+      boolean isPrinting = printerClient.isPrinting();
+      boolean needsAttention = printerClient.needsAttention();
+      if (isPrinting || needsAttention) {
+        boolean isRefresh = false;
+        if (needsAttention) {
+          isRefresh = true;
+        }
+        int numberOfLightPixels = printingIndicator(isRefresh);
+        matrix.drawFastHLine(0, 7, numberOfLightPixels, HIGH);
+      }
     }
     
   }
